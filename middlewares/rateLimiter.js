@@ -71,14 +71,13 @@ const rateLimiterMiddleware = async (req, res, next) => {
   }
 };
 
-async function logRequest(ipAddress, requestUrl, httpMethod, userAgent, queryParams, requestBody, responseStatusCode) {
+async function logRequest(ipAddress, requestUrl, httpMethod, userAgent, queryParams, responseStatusCode) {
   const log = new rateLimiterLog({
     ipAddress,
     requestUrl,
     httpMethod,
     userAgent,
     queryParams,
-    requestBody,
     responseStatusCode,
   });
 

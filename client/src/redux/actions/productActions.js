@@ -51,6 +51,7 @@ export const getAllProduct = () => async (dispatch) => {
       payload: data,
     });
   } catch (error) {
+    alert("gdsgdg");
     dispatch({
       type: ALL_PRODUCTS_FAIL,
       payload:

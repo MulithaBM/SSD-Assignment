@@ -16,24 +16,44 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 
+const libxmljs = require("libxmljs"); // Add libxmljs
+//const corsOptions = require("./config/corsValidation");
+const corsLog = require("./models/corsLogModel");
+
 const app = express();
 
-// Load environment variables from a .env file if available
-require("dotenv").config();
 
-const allowedOrigins = ["http://localhost:3000", "http://localhost:4000"]; // Replace with your specific origins
+//Add CORs option to prevent CSRF attacks
+const allowedOrigins = ["http://localhost:5000", "http://localhost:4000"]; // Replace with your specific origins
 
 const corsOptions = {
   origin: function (origin, callback) {
     if (allowedOrigins.includes(origin) || !origin) {
       callback(null, true);
     } else {
+      //const userAgent = headers["user-agent"];
+      const log = new corsLog(
+        {
+          origin: origin
+        });
+
+        log.save();
       callback(new Error("Not allowed by CORS"));
     }
   },
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
+/* const corsOptions = {
+
+  origin: 'http://localhost:3000',
+  methods: 'GET',
+  optionsSuccessStatus: 204, // some legacy browsers (IE11, various SmartTVs) choke on 204
+}; */
+
+// Load environment variables from a .env file if available
+require("dotenv").config();
+
 
 // middleware
 app.use(express.json());
@@ -46,6 +66,19 @@ app.use(
     useTempFiles: true,
   })
 );
+
+// Set up XML parsing with libxmljs
+app.use((req, res, next) => {
+  if (req.is('text/xml')) {
+    try {
+      const xmlDocument = libxmljs.parseXml(req.body.toString(), { noent: true, noblanks: true });
+      req.xmlDocument = xmlDocument;
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid XML format' });
+    }
+  }
+  next();
+});
 
 app.use("/api", categoryRoutes);
 app.use("/api", authRoutes);

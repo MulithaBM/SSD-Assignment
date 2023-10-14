@@ -2,7 +2,7 @@
 const rateLimiterLog = require('../models/rateLimiterLogModel');
 
 const rate = 3;
-const seconds = 5;
+const seconds = 20;
 const whitelist = ['172.1.1.1']; // '::1' for localhost
 
 const limiter = new RateLimiterMemory({
@@ -12,7 +12,8 @@ const limiter = new RateLimiterMemory({
 });
 
 const rateLimiterMiddleware = async (req, res, next) => {
-  const ipAddress = req.ip;
+
+  console.log(ipAddress);
 
   if (whitelist.includes(ipAddress)) {
     return next();
@@ -42,7 +43,7 @@ const { RateLimiterMemory } = require('rate-limiter-flexible');
 const rateLimiterLog = require('../models/rateLimiterLogModel');
 
 const rate = 3;
-const seconds = 5;
+const seconds = 20;
 const whitelist = ['172.1.1.1']; // '::1' for localhost
 
 const limiter = new RateLimiterMemory({
@@ -61,79 +62,40 @@ const rateLimiterMiddleware = async (req, res, next) => {
   try {
     await limiter.consume(ipAddress);
     next();
-  } catch (error) {
+  } catch (rateLimiterRes) {
+    const remainingSeconds = Math.ceil(rateLimiterRes.msBeforeNext / 1000);
+
     const { method, headers, query, body } = req;
     const userAgent = headers['user-agent'];
-    const responseStatusCode = res.statusCode;
+    const responseStatusCode = 429;
 
-    logRequest(ipAddress, req.originalUrl, method, userAgent, query, body, responseStatusCode);
-    res.status(429).json({ error: `Too many requests, please try again in ${seconds} seconds` });
+    const timestamp = Date.now();
+    const date = new Date(timestamp);
+
+    const timeZoneOffset = 330;
+
+    const localTimeIST = new Date(date.getTime() + timeZoneOffset * 60000);
+
+    logRequest(ipAddress, req.originalUrl, method, userAgent, query, responseStatusCode, localTimeIST);
+
+    res.status(429).json({
+      error: `Too many requests, please try again in ${remainingSeconds} seconds`,
+    });
   }
 };
 
-async function logRequest(ipAddress, requestUrl, httpMethod, userAgent, queryParams, responseStatusCode) {
+async function logRequest(ipAddress, requestUrl, method, userAgent, query, responseStatusCode, timestamp) {
   const log = new rateLimiterLog({
     ipAddress,
     requestUrl,
-    httpMethod,
+    method,
     userAgent,
-    queryParams,
+    query,
     responseStatusCode,
+    timestamp,
   });
 
   await log.save();
 }
 
 module.exports = rateLimiterMiddleware;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* const { RateLimiterMemory } = require('rate-limiter-flexible');
-
-const rate = 50;
-const seconds = 15 * 60;
-const whitelist = ['172.1.1.1']; // '::1' for localhost
-
-const limiter = new RateLimiterMemory({
-  points: rate,
-  duration: seconds,
-  blockDuration: seconds,
-});
-
-const rateLimiterMiddleware = (req, res, next) => {
-  const ipAddress = req.ip;
-
-  if (whitelist.includes(ipAddress)) {
-    return next();
-  }
-
-  limiter
-    .consume(ipAddress)
-    .then(() => {
-      next();
-    })
-    .catch(() => {
-      res.status(429).json({ error: `Too many requests, please try again in ${seconds} seconds` });
-    });
-};
-
-module.exports = rateLimiterMiddleware; */

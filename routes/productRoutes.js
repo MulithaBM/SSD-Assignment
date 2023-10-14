@@ -2,11 +2,12 @@ const express = require("express");
 const productController = require("../controllers/productController");
 const auth = require("../middlewares/auth");
 const authAdmin = require("../middlewares/authAdmin");
+const rateLimiter = require("../middlewares/rateLimiter");
 
 const router = express.Router();
 // must be authenticated and admin
 
-router.get("/shop/products", productController.getShopProducts);
+router.get("/shop/products", rateLimiter, productController.getShopProducts);
 
 router
   .route("/products")
@@ -15,7 +16,7 @@ router
 
 router
   .route("/products/:id")
-  .get(productController.getByIdProduct)
+  .get(rateLimiter, productController.getByIdProduct)
   .delete([auth, authAdmin], productController.deleteProducts)
   .put([auth, authAdmin], productController.updateProducts);
 
